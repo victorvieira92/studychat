@@ -9,401 +9,111 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0d0f14;
-      --bg2: #13161e;
-      --bg3: #1a1e28;
-      --surface: #1e2330;
-      --surface2: #252b3b;
-      --border: #2a3045;
-      --accent: #6ee7b7;
-      --accent2: #34d399;
-      --accent-dim: rgba(110,231,183,0.12);
-      --accent-glow: rgba(110,231,183,0.25);
-      --pink: #f472b6;
-      --pink-dim: rgba(244,114,182,0.12);
-      --yellow: #fbbf24;
-      --blue: #60a5fa;
-      --text: #e2e8f0;
-      --text2: #94a3b8;
-      --text3: #64748b;
-      --radius: 14px;
-      --radius-sm: 8px;
+      --bg: #0d0f14; --bg2: #13161e; --bg3: #1a1e28;
+      --surface: #1e2330; --border: #2a3045;
+      --accent: #6ee7b7; --accent2: #34d399;
+      --accent-dim: rgba(110,231,183,0.12); --accent-glow: rgba(110,231,183,0.25);
+      --pink: #f472b6; --yellow: #fbbf24; --blue: #60a5fa;
+      --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+      --radius: 14px; --radius-sm: 8px;
     }
+    body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-    body {
-      font-family: 'Sora', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ═══ LOGIN SCREEN ═══ */
-    #login-screen {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--bg);
-      z-index: 100;
-    }
-    .login-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 48px 40px;
-      width: min(420px, 92vw);
-      text-align: center;
-      box-shadow: 0 0 80px rgba(110,231,183,0.07);
-    }
-    .login-logo {
-      font-size: 48px; margin-bottom: 8px;
-    }
-    .login-title {
-      font-size: 1.6rem; font-weight: 700; color: var(--accent);
-      margin-bottom: 4px; letter-spacing: -0.5px;
-    }
-    .login-subtitle {
-      color: var(--text2); font-size: 0.875rem; margin-bottom: 36px;
-    }
-    .avatar-grid {
-      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    .avatar-btn {
-      width: 56px; height: 56px; border-radius: 50%;
-      border: 2px solid var(--border);
-      background: var(--surface);
-      font-size: 28px; cursor: pointer;
-      transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-    }
-    .avatar-btn:hover, .avatar-btn.selected {
-      border-color: var(--accent);
-      background: var(--accent-dim);
-      transform: scale(1.1);
-      box-shadow: 0 0 16px var(--accent-glow);
-    }
-    .login-input {
-      width: 100%;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      color: var(--text);
-      font-family: 'Sora', sans-serif;
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-      transition: border-color 0.2s;
-      outline: none;
-    }
+    /* LOGIN */
+    #login-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 100; }
+    #login-screen.hidden { display: none; }
+    .login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 48px 40px; width: min(420px, 92vw); text-align: center; box-shadow: 0 0 80px rgba(110,231,183,0.07); }
+    .login-logo { font-size: 48px; margin-bottom: 8px; }
+    .login-title { font-size: 1.6rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; letter-spacing: -0.5px; }
+    .login-subtitle { color: var(--text2); font-size: 0.875rem; margin-bottom: 32px; }
+    .login-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 18px; color: var(--text); font-family: 'Sora', sans-serif; font-size: 0.95rem; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
     .login-input:focus { border-color: var(--accent); }
-    .login-btn {
-      width: 100%;
-      background: var(--accent);
-      color: #0d0f14;
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 14px;
-      font-family: 'Sora', sans-serif;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .login-btn:hover {
-      background: var(--accent2);
-      box-shadow: 0 0 20px var(--accent-glow);
-      transform: translateY(-1px);
-    }
+    .login-btn { width: 100%; background: var(--accent); color: #0d0f14; border: none; border-radius: var(--radius-sm); padding: 14px; font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
+    .login-btn:hover { background: var(--accent2); box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-1px); }
+    .login-error { background: rgba(244,114,182,0.1); border: 1px solid rgba(244,114,182,0.3); color: var(--pink); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+    .login-error.visible { display: block; }
 
-    /* ═══ APP LAYOUT ═══ */
+    /* APP */
     #app { display: none; flex: 1; overflow: hidden; }
     #app.visible { display: flex; height: 100dvh; }
 
     /* SIDEBAR */
-    .sidebar {
-      width: 260px; min-width: 260px;
-      background: var(--bg2);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-    }
-    .sidebar-header {
-      padding: 20px 16px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .app-brand {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 700; font-size: 1.1rem; color: var(--accent);
-      margin-bottom: 14px;
-    }
+    .sidebar { width: 260px; min-width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+    .app-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--accent); margin-bottom: 14px; }
     .app-brand span { font-size: 22px; }
-
-    .online-users {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 0.78rem; color: var(--text2);
-    }
-    .online-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--accent); 
-      box-shadow: 0 0 6px var(--accent);
-      flex-shrink: 0;
-    }
-
-    /* ROOMS LIST */
+    .sidebar-user { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 10px; }
+    .sidebar-user .u-avatar { font-size: 20px; }
+    .sidebar-user .u-name { font-size: 0.82rem; font-weight: 600; flex: 1; }
+    .logout-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px; transition: color 0.2s; }
+    .logout-btn:hover { color: var(--pink); }
+    .online-users { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text2); }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); flex-shrink: 0; }
     .rooms-section { padding: 8px 12px; overflow-y: auto; flex: 1; }
     .rooms-section::-webkit-scrollbar { width: 4px; }
-    .rooms-section::-webkit-scrollbar-track { background: transparent; }
     .rooms-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .section-label {
-      font-size: 0.68rem; font-weight: 600;
-      color: var(--text3); text-transform: uppercase;
-      letter-spacing: 1px; padding: 0 4px;
-      margin-bottom: 8px;
-    }
-    .room-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      cursor: pointer; font-size: 0.82rem;
-      color: var(--text2);
-      transition: all 0.15s;
-      position: relative;
-    }
-    .room-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .section-label { font-size: 0.68rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 0 4px; margin-bottom: 4px; }
+    .room-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.82rem; color: var(--text2); transition: all 0.15s; position: relative; }
     .room-item:hover { background: var(--surface); color: var(--text); }
-    .room-item.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-      font-weight: 500;
-    }
-    .room-item.active::before {
-      content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
-      width: 3px; border-radius: 2px;
-      background: var(--accent);
-    }
-    .room-unread {
-      margin-left: auto;
-      background: var(--accent);
-      color: #0d0f14;
-      font-size: 0.7rem; font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 20px;
-      display: none;
-    }
+    .room-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 500; }
+    .room-item.active::before { content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; border-radius: 2px; background: var(--accent); }
+    .room-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .room-unread { margin-left: auto; background: var(--accent); color: #0d0f14; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; display: none; }
     .room-unread.visible { display: block; }
-
-    /* USERS in sidebar */
-    .users-section { padding: 0 12px 8px; }
-    .user-pill {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      font-size: 0.82rem; color: var(--text2);
-    }
+    .users-section { border-top: 1px solid var(--border); padding: 12px; }
+    .user-pill { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--text2); }
     .user-pill .u-avatar { font-size: 18px; }
-    .user-pill .u-name { font-weight: 500; }
 
-    /* MAIN CHAT */
-    .chat-area {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
-      background: var(--bg);
-    }
-
-    /* CHAT HEADER */
-    .chat-header {
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg2);
-      display: flex; align-items: center; gap: 12px;
-    }
+    /* CHAT */
+    .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg2); display: flex; align-items: center; gap: 12px; }
     .chat-header-icon { font-size: 22px; }
     .chat-header-title { font-weight: 600; font-size: 1rem; }
     .chat-header-sub { font-size: 0.78rem; color: var(--text2); }
-    .typing-indicator {
-      margin-left: auto;
-      font-size: 0.78rem; color: var(--accent);
-      font-style: italic;
-      min-width: 120px; text-align: right;
-      opacity: 0; transition: opacity 0.2s;
-    }
+    .typing-indicator { margin-left: auto; font-size: 0.78rem; color: var(--accent); font-style: italic; min-width: 120px; text-align: right; opacity: 0; transition: opacity 0.2s; }
     .typing-indicator.visible { opacity: 1; }
-
-    /* MESSAGES */
-    .messages-container {
-      flex: 1; overflow-y: auto;
-      padding: 20px 24px;
-      display: flex; flex-direction: column; gap: 4px;
-    }
+    .messages-container { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 4px; }
     .messages-container::-webkit-scrollbar { width: 6px; }
-    .messages-container::-webkit-scrollbar-track { background: transparent; }
     .messages-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    .day-divider {
-      text-align: center; font-size: 0.72rem;
-      color: var(--text3); margin: 12px 0;
-      position: relative;
-    }
-    .day-divider::before {
-      content: ''; position: absolute;
-      left: 0; right: 0; top: 50%;
-      height: 1px; background: var(--border);
-    }
-    .day-divider span {
-      background: var(--bg); padding: 0 12px;
-      position: relative;
-    }
-
     .msg-group { display: flex; gap: 10px; margin-top: 10px; }
     .msg-group.me { flex-direction: row-reverse; }
-    .msg-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--surface);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; flex-shrink: 0; align-self: flex-end;
-    }
+    .msg-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; align-self: flex-end; }
     .msg-content { max-width: 65%; display: flex; flex-direction: column; gap: 3px; }
     .msg-group.me .msg-content { align-items: flex-end; }
-    .msg-meta {
-      font-size: 0.7rem; color: var(--text3);
-      display: flex; align-items: center; gap: 6px;
-      padding: 0 4px;
-    }
+    .msg-meta { font-size: 0.7rem; color: var(--text3); display: flex; align-items: center; gap: 6px; padding: 0 4px; }
     .msg-meta .sender { font-weight: 600; color: var(--text2); }
-
-    .bubble {
-      padding: 10px 14px;
-      border-radius: 18px;
-      font-size: 0.88rem;
-      line-height: 1.55;
-      word-break: break-word;
-      max-width: 100%;
-    }
-
-    /* Message types */
-    .bubble.text {
-      background: var(--surface);
-      color: var(--text);
-      border-bottom-left-radius: 6px;
-    }
-    .msg-group.me .bubble.text {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      border: 1px solid rgba(110,231,183,0.2);
-      border-bottom-right-radius: 6px;
-      border-bottom-left-radius: 18px;
-    }
-
-    .bubble.resumo {
-      background: rgba(251,191,36,0.08);
-      border: 1px solid rgba(251,191,36,0.25);
-      border-radius: 12px;
-      position: relative;
-    }
-    .bubble.dica {
-      background: rgba(96,165,250,0.08);
-      border: 1px solid rgba(96,165,250,0.25);
-      border-radius: 12px;
-    }
-    .bubble.duvida {
-      background: rgba(244,114,182,0.08);
-      border: 1px solid rgba(244,114,182,0.25);
-      border-radius: 12px;
-    }
-
-    .bubble-tag {
-      font-size: 0.68rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.88rem; line-height: 1.55; word-break: break-word; max-width: 100%; }
+    .bubble.text { background: var(--surface); color: var(--text); border-bottom-left-radius: 6px; }
+    .msg-group.me .bubble.text { background: var(--accent-dim); border: 1px solid rgba(110,231,183,0.2); border-bottom-right-radius: 6px; border-bottom-left-radius: 18px; }
+    .bubble.resumo { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); border-radius: 12px; }
+    .bubble.dica { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25); border-radius: 12px; }
+    .bubble.duvida { background: rgba(244,114,182,0.08); border: 1px solid rgba(244,114,182,0.25); border-radius: 12px; }
+    .bubble-tag { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; }
     .bubble.resumo .bubble-tag { color: var(--yellow); }
     .bubble.dica .bubble-tag { color: var(--blue); }
     .bubble.duvida .bubble-tag { color: var(--pink); }
-
     .bubble-text { white-space: pre-wrap; }
+    .system-msg { text-align: center; font-size: 0.75rem; color: var(--text3); padding: 6px 0; font-style: italic; }
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text3); gap: 12px; }
+    .empty-state .icon { font-size: 48px; opacity: 0.4; }
 
-    /* System events */
-    .system-msg {
-      text-align: center; font-size: 0.75rem;
-      color: var(--text3); padding: 6px 0;
-      font-style: italic;
-    }
-
-    /* INPUT AREA */
-    .input-area {
-      padding: 16px 24px 20px;
-      background: var(--bg2);
-      border-top: 1px solid var(--border);
-    }
-
-    /* Message type selector */
-    .type-selector {
-      display: flex; gap: 6px; margin-bottom: 12px;
-    }
-    .type-btn {
-      padding: 5px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text2);
-      font-family: 'Sora', sans-serif;
-      font-size: 0.75rem; cursor: pointer;
-      transition: all 0.15s;
-    }
+    /* INPUT */
+    .input-area { padding: 16px 24px 20px; background: var(--bg2); border-top: 1px solid var(--border); }
+    .type-selector { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .type-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: 'Sora', sans-serif; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
     .type-btn:hover { border-color: var(--accent); color: var(--accent); }
     .type-btn.active[data-type="text"] { background: var(--surface); color: var(--text); border-color: var(--border); }
     .type-btn.active[data-type="resumo"] { background: rgba(251,191,36,0.12); color: var(--yellow); border-color: rgba(251,191,36,0.4); }
     .type-btn.active[data-type="dica"] { background: rgba(96,165,250,0.12); color: var(--blue); border-color: rgba(96,165,250,0.4); }
     .type-btn.active[data-type="duvida"] { background: rgba(244,114,182,0.12); color: var(--pink); border-color: rgba(244,114,182,0.4); }
-
-    .input-row {
-      display: flex; gap: 10px; align-items: flex-end;
-    }
-    .msg-input {
-      flex: 1;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      color: var(--text);
-      font-family: 'Sora', sans-serif;
-      font-size: 0.9rem;
-      resize: none;
-      min-height: 44px; max-height: 140px;
-      outline: none;
-      transition: border-color 0.2s;
-      line-height: 1.5;
-    }
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+    .msg-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; color: var(--text); font-family: 'Sora', sans-serif; font-size: 0.9rem; resize: none; min-height: 44px; max-height: 140px; outline: none; transition: border-color 0.2s; line-height: 1.5; }
     .msg-input:focus { border-color: var(--accent); }
     .msg-input::placeholder { color: var(--text3); }
-    .send-btn {
-      width: 44px; height: 44px;
-      background: var(--accent);
-      border: none; border-radius: var(--radius-sm);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.2s;
-      font-size: 18px;
-    }
-    .send-btn:hover {
-      background: var(--accent2);
-      box-shadow: 0 0 16px var(--accent-glow);
-      transform: scale(1.05);
-    }
-    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .send-btn { width: 44px; height: 44px; background: var(--accent); border: none; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; font-size: 18px; }
+    .send-btn:hover { background: var(--accent2); box-shadow: 0 0 16px var(--accent-glow); transform: scale(1.05); }
 
-    /* Empty state */
-    .empty-state {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      color: var(--text3); gap: 12px;
-    }
-    .empty-state .icon { font-size: 48px; opacity: 0.4; }
-    .empty-state p { font-size: 0.875rem; }
-
-    /* Mobile */
     @media (max-width: 640px) {
       .sidebar { display: none; }
       .chat-header { padding: 12px 16px; }
@@ -420,46 +130,36 @@
   <div class="login-card">
     <div class="login-logo">📚</div>
     <div class="login-title">StudyChat</div>
-    <div class="login-subtitle">Chat para estudar juntos para o concurso</div>
-    <div class="avatar-grid">
-      <button class="avatar-btn selected" data-avatar="👨‍💻" onclick="selectAvatar(this)">👨‍💻</button>
-      <button class="avatar-btn" data-avatar="👩‍💻" onclick="selectAvatar(this)">👩‍💻</button>
-      <button class="avatar-btn" data-avatar="🧑‍🎓" onclick="selectAvatar(this)">🧑‍🎓</button>
-      <button class="avatar-btn" data-avatar="👩‍🎓" onclick="selectAvatar(this)">👩‍🎓</button>
-      <button class="avatar-btn" data-avatar="🧑‍💼" onclick="selectAvatar(this)">🧑‍💼</button>
-      <button class="avatar-btn" data-avatar="👩‍💼" onclick="selectAvatar(this)">👩‍💼</button>
-    </div>
-    <input type="text" id="username-input" class="login-input" placeholder="Seu nome (ex: João)" maxlength="20" />
-    <button class="login-btn" onclick="joinChat()">Entrar no Chat ✨</button>
+    <div class="login-subtitle">Faça login para estudar juntos</div>
+    <div class="login-error" id="login-error"></div>
+    <input type="text" id="username-input" class="login-input" placeholder="Usuário" autocomplete="username" />
+    <input type="password" id="password-input" class="login-input" placeholder="Senha" autocomplete="current-password" />
+    <button class="login-btn" onclick="doLogin()">Entrar ✨</button>
   </div>
 </div>
 
 <!-- APP -->
 <div id="app">
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="app-brand"><span>📚</span> StudyChat</div>
+      <div class="sidebar-user">
+        <span class="u-avatar" id="my-avatar">👤</span>
+        <span class="u-name" id="my-username">...</span>
+        <button class="logout-btn" onclick="doLogout()" title="Sair">🚪</button>
+      </div>
       <div class="online-users">
         <div class="online-dot"></div>
         <span id="online-count">0 online</span>
       </div>
     </div>
-
-    <!-- Rooms -->
-    <div class="rooms-section">
-      <div class="section-label">Matérias</div>
-      <div id="rooms-list"></div>
-    </div>
-
-    <!-- Users -->
-    <div class="users-section" style="margin-top:auto; border-top:1px solid var(--border); padding-top:12px;">
-      <div class="section-label" style="padding:0 4px; margin-bottom:8px;">Quem está online</div>
+    <div class="rooms-section" id="rooms-list"></div>
+    <div class="users-section">
+      <div class="section-label" style="margin-bottom:8px;">Online agora</div>
       <div id="users-list"></div>
     </div>
   </aside>
 
-  <!-- Chat -->
   <div class="chat-area">
     <div class="chat-header">
       <div class="chat-header-icon" id="room-icon">💬</div>
@@ -469,9 +169,7 @@
       </div>
       <div class="typing-indicator" id="typing-indicator"></div>
     </div>
-
     <div class="messages-container" id="messages"></div>
-
     <div class="input-area">
       <div class="type-selector">
         <button class="type-btn active" data-type="text" onclick="setMsgType('text', this)">💬 Mensagem</button>
@@ -488,128 +186,174 @@
 </div>
 
 <script>
-  const socket = io();
+  let socket = null;
   let myUsername = '';
-  let myAvatar = '👨‍💻';
+  let myAvatar = '';
   let currentRoom = 'geral';
   let msgType = 'text';
   let typingTimeout = null;
   let unread = {};
-  let allRooms = [];
 
-  // ── LOGIN ──
-  function selectAvatar(btn) {
-    document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    myAvatar = btn.dataset.avatar;
+  async function checkAuth() {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        const user = await res.json();
+        startApp(user.username, user.avatar, user.token);
+      }
+    } catch {}
   }
 
-  document.getElementById('username-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') joinChat();
-  });
+  async function doLogin() {
+    const username = document.getElementById('username-input').value.trim();
+    const password = document.getElementById('password-input').value;
+    const errorEl = document.getElementById('login-error');
+    errorEl.classList.remove('visible');
+    if (!username || !password) {
+      errorEl.textContent = 'Preencha usuário e senha!';
+      errorEl.classList.add('visible');
+      return;
+    }
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || 'Erro ao fazer login';
+        errorEl.classList.add('visible');
+        return;
+      }
+      startApp(data.username, data.avatar, data.token);
+    } catch {
+      errorEl.textContent = 'Erro de conexão. Tente novamente.';
+      errorEl.classList.add('visible');
+    }
+  }
 
-  function joinChat() {
-    const name = document.getElementById('username-input').value.trim();
-    if (!name) { alert('Por favor, insira seu nome!'); return; }
-    myUsername = name;
-    socket.emit('join', { username: name, avatar: myAvatar });
-    document.getElementById('login-screen').style.display = 'none';
+  async function doLogout() {
+    await fetch('/api/logout', { method: 'POST' });
+    location.reload();
+  }
+
+  function startApp(username, avatar, token) {
+    myUsername = username;
+    myAvatar = avatar;
+    document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.add('visible');
+    document.getElementById('my-username').textContent = username;
+    document.getElementById('my-avatar').textContent = avatar;
+    const cookieToken = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
+    const t = cookieToken ? cookieToken.split('=').slice(1).join('=') : (token || '');
+    socket = io({ auth: { token: t } });
+    setupSocket();
   }
 
-  // ── ROOMS ──
-  socket.on('room_list', (rooms) => {
-    allRooms = rooms;
-    const list = document.getElementById('rooms-list');
-    list.innerHTML = '';
-
-    const groupLabels = {
-      geral:      '📌 Geral',
-      linguagens: '🗣️ Linguagens',
-      exatas:     '🔢 Exatas & Dados',
-      adm:        '🏛️ Adm. & Finanças',
-      direito:    '⚖️ Direito',
-      aduaneiro:  '🌍 Comércio & Aduana',
-    };
-
-    const grouped = {};
-    rooms.forEach(r => {
-      if (!grouped[r.group]) grouped[r.group] = [];
-      grouped[r.group].push(r);
-    });
-
-    Object.entries(grouped).forEach(([group, items]) => {
-      const label = document.createElement('div');
-      label.className = 'section-label';
-      label.style.marginTop = '14px';
-      label.textContent = groupLabels[group] || group;
-      list.appendChild(label);
-
-      items.forEach(r => {
-        const el = document.createElement('div');
-        el.className = 'room-item' + (r.id === currentRoom ? ' active' : '');
-        el.dataset.roomId = r.id;
-        el.innerHTML = `<span class="room-name">${r.name}</span><span class="room-unread" id="unread-${r.id}">0</span>`;
-        el.onclick = () => switchRoom(r.id);
-        list.appendChild(el);
+  function setupSocket() {
+    socket.on('room_list', (rooms) => {
+      const list = document.getElementById('rooms-list');
+      list.innerHTML = '';
+      const groupLabels = {
+        geral: '📌 Geral', linguagens: '🗣️ Linguagens',
+        exatas: '🔢 Exatas & Dados', adm: '🏛️ Adm. & Finanças',
+        direito: '⚖️ Direito', aduaneiro: '🌍 Comércio & Aduana',
+      };
+      const grouped = {};
+      rooms.forEach(r => { if (!grouped[r.group]) grouped[r.group] = []; grouped[r.group].push(r); });
+      Object.entries(grouped).forEach(([group, items]) => {
+        const label = document.createElement('div');
+        label.className = 'section-label';
+        label.style.marginTop = '14px';
+        label.textContent = groupLabels[group] || group;
+        list.appendChild(label);
+        items.forEach(r => {
+          const el = document.createElement('div');
+          el.className = 'room-item' + (r.id === currentRoom ? ' active' : '');
+          el.dataset.roomId = r.id;
+          el.innerHTML = `<span class="room-name">${r.name}</span><span class="room-unread" id="unread-${r.id}">0</span>`;
+          el.onclick = () => switchRoom(r.id);
+          list.appendChild(el);
+        });
       });
     });
-  });
+
+    socket.on('history', (msgs) => {
+      const container = document.getElementById('messages');
+      container.innerHTML = '';
+      if (msgs.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">💬</div><p>Nenhuma mensagem ainda. Comece a conversa!</p></div>`;
+        return;
+      }
+      msgs.forEach(m => appendMessage(m));
+      scrollToBottom();
+    });
+
+    socket.on('message', (msg) => {
+      if (msg.roomId === currentRoom) { appendMessage(msg); scrollToBottom(); }
+      else {
+        unread[msg.roomId] = (unread[msg.roomId] || 0) + 1;
+        const el = document.getElementById(`unread-${msg.roomId}`);
+        if (el) { el.textContent = unread[msg.roomId]; el.classList.add('visible'); }
+      }
+    });
+
+    socket.on('user_event', ({ type, username, avatar }) => {
+      if (username === myUsername) return;
+      const container = document.getElementById('messages');
+      const el = document.createElement('div');
+      el.className = 'system-msg';
+      el.textContent = type === 'join' ? `${avatar} ${username} entrou no chat` : `${username} saiu do chat`;
+      container.appendChild(el);
+      scrollToBottom();
+    });
+
+    socket.on('user_list', (users) => {
+      document.getElementById('online-count').textContent = `${users.length} online`;
+      document.getElementById('users-list').innerHTML = users.map(u => `
+        <div class="user-pill">
+          <span class="u-avatar">${u.avatar}</span>
+          <span class="u-name">${u.username}${u.username === myUsername ? ' (você)' : ''}</span>
+        </div>`).join('');
+    });
+
+    socket.on('switched_room', ({ roomId, roomName }) => {
+      document.getElementById('room-icon').textContent = roomName.split(' ')[0];
+      const title = roomName.replace(/^\S+\s/, '');
+      document.getElementById('room-title').textContent = title;
+      document.getElementById('room-sub').textContent = `Canal de ${title.toLowerCase()}`;
+    });
+
+    socket.on('typing', ({ username, isTyping }) => {
+      const el = document.getElementById('typing-indicator');
+      if (isTyping) { el.textContent = `${username} está digitando...`; el.classList.add('visible'); }
+      else { el.classList.remove('visible'); }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Erro:', err.message);
+    });
+  }
 
   function switchRoom(roomId) {
     if (roomId === currentRoom) return;
     currentRoom = roomId;
     socket.emit('switch_room', roomId);
-    document.querySelectorAll('.room-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.roomId === roomId);
-    });
+    document.querySelectorAll('.room-item').forEach(el => el.classList.toggle('active', el.dataset.roomId === roomId));
     const unreadEl = document.getElementById(`unread-${roomId}`);
     if (unreadEl) { unreadEl.textContent = '0'; unreadEl.classList.remove('visible'); }
     unread[roomId] = 0;
     document.getElementById('messages').innerHTML = '';
   }
 
-  socket.on('switched_room', ({ roomId, roomName }) => {
-    document.getElementById('room-icon').textContent = roomName.split(' ')[0];
-    const title = roomName.replace(/^\S+\s/, '');
-    document.getElementById('room-title').textContent = title;
-    document.getElementById('room-sub').textContent = `Canal de ${title.toLowerCase()}`;
-  });
-
-  // ── MESSAGES ──
-  socket.on('history', (msgs) => {
-    const container = document.getElementById('messages');
-    container.innerHTML = '';
-    if (msgs.length === 0) {
-      container.innerHTML = `<div class="empty-state"><div class="icon">💬</div><p>Nenhuma mensagem ainda. Comece a conversa!</p></div>`;
-      return;
-    }
-    msgs.forEach(m => appendMessage(m));
-    scrollToBottom();
-  });
-
-  socket.on('message', (msg) => {
-    if (msg.roomId === currentRoom) {
-      appendMessage(msg);
-      scrollToBottom();
-    } else {
-      // Unread badge
-      unread[msg.roomId] = (unread[msg.roomId] || 0) + 1;
-      const el = document.getElementById(`unread-${msg.roomId}`);
-      if (el) { el.textContent = unread[msg.roomId]; el.classList.add('visible'); }
-    }
-  });
-
   function appendMessage(msg) {
     const container = document.getElementById('messages');
-    // Remove empty state
     const empty = container.querySelector('.empty-state');
     if (empty) empty.remove();
-
     const isMe = msg.username === myUsername;
     const typeLabels = { resumo: '📝 Resumo', dica: '💡 Dica', duvida: '❓ Dúvida' };
-    const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
+    const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const group = document.createElement('div');
     group.className = `msg-group${isMe ? ' me' : ''}`;
     group.innerHTML = `
@@ -623,84 +367,35 @@
           ${msg.type !== 'text' ? `<div class="bubble-tag">${typeLabels[msg.type]}</div>` : ''}
           <div class="bubble-text">${escapeHtml(msg.text)}</div>
         </div>
-      </div>
-    `;
+      </div>`;
     container.appendChild(group);
   }
 
-  socket.on('user_event', ({ type, username, avatar }) => {
-    if (username === myUsername) return;
-    const container = document.getElementById('messages');
-    const el = document.createElement('div');
-    el.className = 'system-msg';
-    el.textContent = type === 'join'
-      ? `${avatar} ${username} entrou no chat`
-      : `${username} saiu do chat`;
-    container.appendChild(el);
-    scrollToBottom();
-  });
-
-  // ── USERS ──
-  socket.on('user_list', (users) => {
-    document.getElementById('online-count').textContent = `${users.length} online`;
-    const list = document.getElementById('users-list');
-    list.innerHTML = users.map(u => `
-      <div class="user-pill">
-        <span class="u-avatar">${u.avatar}</span>
-        <span class="u-name">${u.username}${u.username === myUsername ? ' (você)' : ''}</span>
-      </div>
-    `).join('');
-  });
-
-  // ── TYPING ──
-  socket.on('typing', ({ username, isTyping }) => {
-    const el = document.getElementById('typing-indicator');
-    if (isTyping) {
-      el.textContent = `${username} está digitando...`;
-      el.classList.add('visible');
-    } else {
-      el.classList.remove('visible');
-    }
-  });
-
-  // ── INPUT ──
   function setMsgType(type, btn) {
     msgType = type;
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    const placeholders = {
-      text: 'Digite sua mensagem... (Enter para enviar)',
-      resumo: 'Cole seu resumo aqui... (Enter para enviar)',
-      dica: 'Compartilhe uma dica! (Enter para enviar)',
-      duvida: 'Descreva sua dúvida... (Enter para enviar)',
-    };
-    document.getElementById('msg-input').placeholder = placeholders[type];
+    const placeholders = { text: 'Digite sua mensagem...', resumo: 'Cole seu resumo aqui...', dica: 'Compartilhe uma dica!', duvida: 'Descreva sua dúvida...' };
+    document.getElementById('msg-input').placeholder = placeholders[type] + ' (Enter para enviar)';
   }
 
   const input = document.getElementById('msg-input');
   input.addEventListener('input', () => {
-    // Auto-resize
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-
-    // Typing indicator
-    socket.emit('typing', { roomId: currentRoom, isTyping: true });
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      socket.emit('typing', { roomId: currentRoom, isTyping: false });
-    }, 1500);
-  });
-
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (socket) {
+      socket.emit('typing', { roomId: currentRoom, isTyping: true });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => socket.emit('typing', { roomId: currentRoom, isTyping: false }), 1500);
     }
   });
 
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  document.getElementById('password-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+
   function sendMessage() {
     const text = input.value.trim();
-    if (!text || !myUsername) return;
+    if (!text || !socket) return;
     socket.emit('message', { text, type: msgType, roomId: currentRoom });
     socket.emit('typing', { roomId: currentRoom, isTyping: false });
     clearTimeout(typingTimeout);
@@ -708,19 +403,10 @@
     input.style.height = 'auto';
   }
 
-  function scrollToBottom() {
-    const c = document.getElementById('messages');
-    c.scrollTop = c.scrollHeight;
-  }
+  function scrollToBottom() { const c = document.getElementById('messages'); c.scrollTop = c.scrollHeight; }
+  function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
-  function escapeHtml(text) {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
+  checkAuth();
 </script>
 </body>
 </html>
