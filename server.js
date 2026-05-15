@@ -2,134 +2,127 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const { Pool } = require("pg");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: false,
+});
+
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      room_id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      avatar TEXT NOT NULL,
+      text TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'text',
+      timestamp BIGINT NOT NULL
+    );
+  `);
+  console.log("✅ Banco de dados pronto!");
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 
-// In-memory storage
-const messages = [];
 const users = {};
 const rooms = {
-  geral:            { name: "💬 Geral",                        group: "geral",    messages: [] },
-  resumos:          { name: "📝 Resumos Gerais",               group: "geral",    messages: [] },
-  portugues:        { name: "🇧🇷 Língua Portuguesa",           group: "linguagens", messages: [] },
-  ingles:           { name: "🇺🇸 Língua Inglesa",              group: "linguagens", messages: [] },
-  raciocinio:       { name: "🧮 Raciocínio Lógico-Matemático", group: "exatas",   messages: [] },
-  estatistica:      { name: "📊 Estatística",                  group: "exatas",   messages: [] },
-  fluencia_dados:   { name: "🗃️ Fluência em Dados",            group: "exatas",   messages: [] },
-  economia:         { name: "💰 Economia e Finanças Públicas", group: "adm",      messages: [] },
-  adm_geral:        { name: "🏢 Administração Geral",          group: "adm",      messages: [] },
-  adm_publica:      { name: "🏛️ Administração Pública",        group: "adm",      messages: [] },
-  auditoria:        { name: "🔍 Auditoria",                    group: "adm",      messages: [] },
-  contabilidade:    { name: "📒 Contabilidade Geral e Pública", group: "adm",     messages: [] },
-  dir_administrativo: { name: "⚖️ Direito Administrativo",    group: "direito",  messages: [] },
-  dir_constitucional: { name: "📜 Direito Constitucional",    group: "direito",  messages: [] },
-  dir_previdenciario: { name: "👴 Direito Previdenciário",     group: "direito",  messages: [] },
-  dir_tributario:   { name: "🧾 Direito Tributário",           group: "direito",  messages: [] },
-  leg_tributaria:   { name: "📋 Legislação Tributária",        group: "direito",  messages: [] },
-  comercio_int:     { name: "🌍 Comércio Internacional",       group: "aduaneiro", messages: [] },
-  leg_aduaneira:    { name: "🛃 Legislação Aduaneira",         group: "aduaneiro", messages: [] },
+  geral:              { name: "💬 Geral",                         group: "geral" },
+  resumos:            { name: "📝 Resumos Gerais",                group: "geral" },
+  portugues:          { name: "🇧🇷 Língua Portuguesa",            group: "linguagens" },
+  ingles:             { name: "🇺🇸 Língua Inglesa",               group: "linguagens" },
+  raciocinio:         { name: "🧮 Raciocínio Lógico-Matemático",  group: "exatas" },
+  estatistica:        { name: "📊 Estatística",                   group: "exatas" },
+  fluencia_dados:     { name: "🗃️ Fluência em Dados",             group: "exatas" },
+  economia:           { name: "💰 Economia e Finanças Públicas",  group: "adm" },
+  adm_geral:          { name: "🏢 Administração Geral",           group: "adm" },
+  adm_publica:        { name: "🏛️ Administração Pública",         group: "adm" },
+  auditoria:          { name: "🔍 Auditoria",                     group: "adm" },
+  contabilidade:      { name: "📒 Contabilidade Geral e Pública", group: "adm" },
+  dir_administrativo: { name: "⚖️ Direito Administrativo",        group: "direito" },
+  dir_constitucional: { name: "📜 Direito Constitucional",        group: "direito" },
+  dir_previdenciario: { name: "👴 Direito Previdenciário",        group: "direito" },
+  dir_tributario:     { name: "🧾 Direito Tributário",            group: "direito" },
+  leg_tributaria:     { name: "📋 Legislação Tributária",         group: "direito" },
+  comercio_int:       { name: "🌍 Comércio Internacional",        group: "aduaneiro" },
+  leg_aduaneira:      { name: "🛃 Legislação Aduaneira",          group: "aduaneiro" },
 };
 
 io.on("connection", (socket) => {
-  console.log("Novo usuário conectado:", socket.id);
-
-  // Send room list on connect
   socket.emit("room_list", Object.entries(rooms).map(([id, r]) => ({ id, name: r.name, group: r.group })));
 
-  // User joins with a name
-  socket.on("join", ({ username, avatar }) => {
+  socket.on("join", async ({ username, avatar }) => {
     users[socket.id] = { username, avatar, currentRoom: "geral" };
     socket.join("geral");
-
-    // Send history of general room
-    socket.emit("history", rooms["geral"].messages.slice(-50));
-
-    // Notify room
-    io.to("geral").emit("user_event", {
-      type: "join",
-      username,
-      avatar,
-      timestamp: Date.now(),
-    });
-
-    // Update user list
+    const result = await pool.query(
+      "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50",
+      ["geral"]
+    );
+    socket.emit("history", result.rows.map(dbToMsg));
+    io.to("geral").emit("user_event", { type: "join", username, avatar, timestamp: Date.now() });
     io.emit("user_list", Object.values(users));
-    console.log(`${username} entrou na sala geral`);
   });
 
-  // Switch room
-  socket.on("switch_room", (roomId) => {
+  socket.on("switch_room", async (roomId) => {
     const user = users[socket.id];
     if (!user || !rooms[roomId]) return;
-
-    const oldRoom = user.currentRoom;
-    socket.leave(oldRoom);
+    socket.leave(user.currentRoom);
     socket.join(roomId);
     user.currentRoom = roomId;
-
-    // Send history
-    socket.emit("history", rooms[roomId].messages.slice(-50));
+    const result = await pool.query(
+      "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50",
+      [roomId]
+    );
+    socket.emit("history", result.rows.map(dbToMsg));
     socket.emit("switched_room", { roomId, roomName: rooms[roomId].name });
   });
 
-  // Message
-  socket.on("message", ({ text, type, roomId }) => {
+  socket.on("message", async ({ text, type, roomId }) => {
     const user = users[socket.id];
     if (!user) return;
-
-    const msg = {
-      id: Date.now() + Math.random(),
-      username: user.username,
-      avatar: user.avatar,
-      text,
-      type: type || "text", // text | resumo | dica | duvida
-      roomId,
-      timestamp: Date.now(),
-    };
-
-    if (rooms[roomId]) {
-      rooms[roomId].messages.push(msg);
-      // Keep last 200 messages per room
-      if (rooms[roomId].messages.length > 200) {
-        rooms[roomId].messages.shift();
-      }
-    }
-
-    io.to(roomId).emit("message", msg);
+    const result = await pool.query(
+      "INSERT INTO messages (room_id, username, avatar, text, type, timestamp) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",
+      [roomId, user.username, user.avatar, text, type || "text", Date.now()]
+    );
+    io.to(roomId).emit("message", dbToMsg(result.rows[0]));
   });
 
-  // Typing indicator
   socket.on("typing", ({ roomId, isTyping }) => {
     const user = users[socket.id];
     if (!user) return;
     socket.to(roomId).emit("typing", { username: user.username, isTyping });
   });
 
-  // Disconnect
   socket.on("disconnect", () => {
     const user = users[socket.id];
     if (user) {
-      io.emit("user_event", {
-        type: "leave",
-        username: user.username,
-        timestamp: Date.now(),
-      });
+      io.emit("user_event", { type: "leave", username: user.username, timestamp: Date.now() });
       delete users[socket.id];
       io.emit("user_list", Object.values(users));
-      console.log(`${user.username} desconectou`);
     }
   });
 });
 
+function dbToMsg(row) {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    username: row.username,
+    avatar: row.avatar,
+    text: row.text,
+    type: row.type,
+    timestamp: Number(row.timestamp),
+  };
+}
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n✅ StudyChat rodando!`);
-  console.log(`📡 Acesse: http://localhost:${PORT}`);
-  console.log(`📡 Na rede: http://[SEU-IP-LOCAL]:${PORT}`);
-  console.log(`\nDica: Para ver seu IP local, rode: ipconfig (Windows) ou ip a (Linux)\n`);
+initDB().then(() => {
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ StudyChat rodando na porta ${PORT}!`);
+  });
 });
