@@ -45,21 +45,18 @@ async function initDB() {
   ];
 
   for (const u of users) {
-    const exists = await pool.query("SELECT id FROM users WHERE username = $1", [u.username]);
+    const name = u.username.toLowerCase().trim();
+    const hash = await bcrypt.hash(u.password.trim(), 10);
+    const exists = await pool.query("SELECT id FROM users WHERE username = $1", [name]);
     if (exists.rows.length === 0) {
-      const hash = await bcrypt.hash(u.password, 10);
       await pool.query(
         "INSERT INTO users (username, password, avatar, created_at) VALUES ($1, $2, $3, $4)",
-        [u.username, hash, u.avatar, Date.now()]
+        [name, hash, u.avatar, Date.now()]
       );
-      console.log(`✅ Usuário criado: ${u.username}`);
+      console.log(`✅ Usuário criado: ${name}`);
     } else {
-      const hash = await bcrypt.hash(u.password, 10);
-      await pool.query(
-        "UPDATE users SET password = $1 WHERE username = $2",
-        [hash, u.username]
-      );
-      console.log(`✅ Senha atualizada: ${u.username}`);
+      await pool.query("UPDATE users SET password = $1 WHERE username = $2", [hash, name]);
+      console.log(`✅ Senha atualizada: ${name}`);
     }
   }
   console.log("✅ Banco de dados pronto!");
