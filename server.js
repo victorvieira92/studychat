@@ -53,6 +53,13 @@ async function initDB() {
         [u.username, hash, u.avatar, Date.now()]
       );
       console.log(`✅ Usuário criado: ${u.username}`);
+    } else {
+      const hash = await bcrypt.hash(u.password, 10);
+      await pool.query(
+        "UPDATE users SET password = $1 WHERE username = $2",
+        [hash, u.username]
+      );
+      console.log(`✅ Senha atualizada: ${u.username}`);
     }
   }
   console.log("✅ Banco de dados pronto!");
