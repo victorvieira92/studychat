@@ -12,6 +12,9 @@
   "dependencies": {
     "express": "^5.2.1",
     "socket.io": "^4.8.3",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.6"
   }
 }
