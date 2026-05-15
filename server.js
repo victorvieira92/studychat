@@ -70,9 +70,10 @@ app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Preencha todos os campos" });
 
+  console.log(`Login tentativa: "${username}" / "${password}"`);
   const result = await pool.query("SELECT * FROM users WHERE username = $1", [username.toLowerCase()]);
+  console.log(`Usuários encontrados: ${result.rows.length}`);
   if (result.rows.length === 0) return res.status(401).json({ error: "Usuário ou senha incorretos" });
-
   const user = result.rows[0];
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ error: "Usuário ou senha incorretos" });
