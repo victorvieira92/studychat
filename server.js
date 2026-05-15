@@ -3,18 +3,30 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const { Pool } = require("pg");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: false,
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: false });
+const JWT_SECRET = process.env.JWT_SECRET || "studychat_secret_2024";
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, "public")));
 
 async function initDB() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      avatar TEXT NOT NULL DEFAULT '👨‍💻',
+      created_at BIGINT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS messages (
       id SERIAL PRIMARY KEY,
       room_id TEXT NOT NULL,
@@ -25,12 +37,73 @@ async function initDB() {
       timestamp BIGINT NOT NULL
     );
   `);
+
+  // Create default users if they don't exist
+  const users = [
+    { username: process.env.USER1_NAME || "usuario1", password: process.env.USER1_PASS || "senha1", avatar: "👨‍💻" },
+    { username: process.env.USER2_NAME || "usuario2", password: process.env.USER2_PASS || "senha2", avatar: "👩‍💻" },
+  ];
+
+  for (const u of users) {
+    const exists = await pool.query("SELECT id FROM users WHERE username = $1", [u.username]);
+    if (exists.rows.length === 0) {
+      const hash = await bcrypt.hash(u.password, 10);
+      await pool.query(
+        "INSERT INTO users (username, password, avatar, created_at) VALUES ($1, $2, $3, $4)",
+        [u.username, hash, u.avatar, Date.now()]
+      );
+      console.log(`✅ Usuário criado: ${u.username}`);
+    }
+  }
   console.log("✅ Banco de dados pronto!");
 }
 
-app.use(express.static(path.join(__dirname, "public")));
+// ── AUTH ROUTES ──
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Preencha todos os campos" });
 
-const users = {};
+  const result = await pool.query("SELECT * FROM users WHERE username = $1", [username.toLowerCase()]);
+  if (result.rows.length === 0) return res.status(401).json({ error: "Usuário ou senha incorretos" });
+
+  const user = result.rows[0];
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ error: "Usuário ou senha incorretos" });
+
+  const token = jwt.sign({ id: user.id, username: user.username, avatar: user.avatar }, JWT_SECRET, { expiresIn: "30d" });
+  res.cookie("token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.json({ ok: true, username: user.username, avatar: user.avatar });
+});
+
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("token");
+  res.json({ ok: true });
+});
+
+app.get("/api/me", (req, res) => {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ error: "Não autenticado" });
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    res.json({ username: user.username, avatar: user.avatar });
+  } catch {
+    res.status(401).json({ error: "Token inválido" });
+  }
+});
+
+// ── SOCKET AUTH ──
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error("Não autenticado"));
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    socket.user = user;
+    next();
+  } catch {
+    next(new Error("Token inválido"));
+  }
+});
+
 const rooms = {
   geral:              { name: "💬 Geral",                         group: "geral" },
   resumos:            { name: "📝 Resumos Gerais",                group: "geral" },
@@ -53,76 +126,64 @@ const rooms = {
   leg_aduaneira:      { name: "🛃 Legislação Aduaneira",          group: "aduaneiro" },
 };
 
-io.on("connection", (socket) => {
+const onlineUsers = {};
+
+io.on("connection", async (socket) => {
+  const { username, avatar } = socket.user;
+  onlineUsers[socket.id] = { username, avatar, currentRoom: "geral" };
+  socket.join("geral");
+
   socket.emit("room_list", Object.entries(rooms).map(([id, r]) => ({ id, name: r.name, group: r.group })));
 
-  socket.on("join", async ({ username, avatar }) => {
-    users[socket.id] = { username, avatar, currentRoom: "geral" };
-    socket.join("geral");
-    const result = await pool.query(
-      "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50",
-      ["geral"]
-    );
-    socket.emit("history", result.rows.map(dbToMsg));
-    io.to("geral").emit("user_event", { type: "join", username, avatar, timestamp: Date.now() });
-    io.emit("user_list", Object.values(users));
-  });
+  const result = await pool.query(
+    "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50", ["geral"]
+  );
+  socket.emit("history", result.rows.map(dbToMsg));
+
+  io.to("geral").emit("user_event", { type: "join", username, avatar, timestamp: Date.now() });
+  io.emit("user_list", Object.values(onlineUsers));
 
   socket.on("switch_room", async (roomId) => {
-    const user = users[socket.id];
-    if (!user || !rooms[roomId]) return;
-    socket.leave(user.currentRoom);
+    if (!rooms[roomId]) return;
+    socket.leave(onlineUsers[socket.id].currentRoom);
     socket.join(roomId);
-    user.currentRoom = roomId;
-    const result = await pool.query(
-      "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50",
-      [roomId]
+    onlineUsers[socket.id].currentRoom = roomId;
+    const r = await pool.query(
+      "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50", [roomId]
     );
-    socket.emit("history", result.rows.map(dbToMsg));
+    socket.emit("history", r.rows.map(dbToMsg));
     socket.emit("switched_room", { roomId, roomName: rooms[roomId].name });
   });
 
   socket.on("message", async ({ text, type, roomId }) => {
-    const user = users[socket.id];
-    if (!user) return;
-    const result = await pool.query(
+    if (!text || !rooms[roomId]) return;
+    const r = await pool.query(
       "INSERT INTO messages (room_id, username, avatar, text, type, timestamp) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",
-      [roomId, user.username, user.avatar, text, type || "text", Date.now()]
+      [roomId, username, avatar, text, type || "text", Date.now()]
     );
-    io.to(roomId).emit("message", dbToMsg(result.rows[0]));
+    io.to(roomId).emit("message", dbToMsg(r.rows[0]));
   });
 
   socket.on("typing", ({ roomId, isTyping }) => {
-    const user = users[socket.id];
-    if (!user) return;
-    socket.to(roomId).emit("typing", { username: user.username, isTyping });
+    socket.to(roomId).emit("typing", { username, isTyping });
   });
 
   socket.on("disconnect", () => {
-    const user = users[socket.id];
-    if (user) {
-      io.emit("user_event", { type: "leave", username: user.username, timestamp: Date.now() });
-      delete users[socket.id];
-      io.emit("user_list", Object.values(users));
-    }
+    io.emit("user_event", { type: "leave", username, timestamp: Date.now() });
+    delete onlineUsers[socket.id];
+    io.emit("user_list", Object.values(onlineUsers));
   });
 });
 
 function dbToMsg(row) {
   return {
-    id: row.id,
-    roomId: row.room_id,
-    username: row.username,
-    avatar: row.avatar,
-    text: row.text,
-    type: row.type,
+    id: row.id, roomId: row.room_id, username: row.username,
+    avatar: row.avatar, text: row.text, type: row.type,
     timestamp: Number(row.timestamp),
   };
 }
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ StudyChat rodando na porta ${PORT}!`);
-  });
+  server.listen(PORT, "0.0.0.0", () => console.log(`✅ StudyChat rodando na porta ${PORT}!`));
 });
