@@ -76,8 +76,8 @@ app.post("/api/login", async (req, res) => {
   if (!valid) return res.status(401).json({ error: "Usuário ou senha incorretos" });
 
   const token = jwt.sign({ id: user.id, username: user.username, avatar: user.avatar }, JWT_SECRET, { expiresIn: "30d" });
-  res.cookie("token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-  res.json({ ok: true, username: user.username, avatar: user.avatar });
+ res.cookie("token", token, { httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.json({ ok: true, username: user.username, avatar: user.avatar, token });
 });
 
 app.post("/api/logout", (req, res) => {
@@ -90,7 +90,7 @@ app.get("/api/me", (req, res) => {
   if (!token) return res.status(401).json({ error: "Não autenticado" });
   try {
     const user = jwt.verify(token, JWT_SECRET);
-    res.json({ username: user.username, avatar: user.avatar });
+    res.json({ username: user.username, avatar: user.avatar, token });
   } catch {
     res.status(401).json({ error: "Token inválido" });
   }
