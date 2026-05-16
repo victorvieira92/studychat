@@ -138,7 +138,10 @@ io.on("connection", async (socket) => {
   onlineUsers[socket.id] = { username, avatar, currentRoom: "geral" };
   socket.join("geral");
 
-  socket.emit("room_list", Object.entries(rooms).map(([id, r]) => ({ id, name: r.name, group: r.group })));
+  // Pequeno delay para garantir que o cliente está pronto
+  setTimeout(() => {
+    socket.emit("room_list", Object.entries(rooms).map(([id, r]) => ({ id, name: r.name, group: r.group })));
+  }, 300);
 
   const result = await pool.query(
     "SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC LIMIT 50", ["geral"]
